@@ -203,9 +203,10 @@ console.log('✓ Renderer setup complete');
 
 function animate() {
     // Calculate target rotation based on mouse position
-    // Negated the values so the arm follows the cursor
-    targetX = mouseX * -0.001;  // Convert to radians
-    targetY = mouseY * -0.001;
+    // Adjusted the direction values so the arm follows the cursor correctly when facing forward
+    // Added Math.PI to targetX to rotate the model 180 degrees to show its front side
+    targetX = (mouseX * 0.001) + Math.PI;  // Convert to radians and flip 180 deg
+    targetY = mouseY * 0.001;
     
     // Update model rotation with easing (smooth interpolation)
     if (robotArm) {
