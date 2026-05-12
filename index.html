@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aethery Robotics</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital@0;1&family=Inter:wght@300;400;700&display=swap" rel="stylesheet">
+    
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Import Map for Three.js Bare Specifiers -->
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+      }
+    }
+    </script>
+</head>
+<body>
+    <!-- 3D Canvas Background -->
+    <canvas id="webgl"></canvas>
+
+    <!-- UI Layer (Overlay) -->
+    <main class="ui-layer">
+        <!-- HEADER -->
+        <header>
+            <!-- Logo -->
+            <div class="logo">
+                Aethery<br><span>/Robotics</span>
+            </div>
+            
+            <!-- Navigation -->
+            <nav>
+                <a href="#home">Home</a>
+                <a href="#shop">Shop</a>
+                <a href="#about">About</a>
+                <a href="#contact">Contact</a>
+            </nav>
+            
+            <!-- Toggle Button -->
+            <div class="toggle-container">
+                <span class="toggle-label">ON</span>
+                <div class="toggle-track">
+                    <div class="toggle-knob">⚡</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- FOOTER -->
+        <footer>
+            <!-- Info Text (Bottom Left) -->
+            <div class="info-text">
+                <p>AI Driven Mechanical Arms for Precision,<br>Strength and Adaptability.</p>
+            </div>
+            
+            <!-- Main Title (Center) -->
+            <h1 class="main-title">Intelligent <em>robotics</em></h1>
+            
+            <!-- Social Links (Bottom Right) -->
+            <div class="social-links">
+                <a href="#instagram">INSTAGRAM</a>
+                <a href="#twitter">TWITTER</a>
+                <a href="#facebook">FACEBOOK</a>
+            </div>
+        </footer>
+    </main>
+
+    <!-- Scripts -->
+    <script type="module" src="script.js"></script>
+</body>
+</html>

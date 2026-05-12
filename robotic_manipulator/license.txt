@@ -1,0 +1,11 @@
+Model Information:
+* title:	Robotic Manipulator
+* source:	https://sketchfab.com/3d-models/robotic-manipulator-0fd88ae6662745c9a73e28afc9991be4
+* author:	Makke (https://sketchfab.com/makke3d)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Robotic Manipulator" (https://sketchfab.com/3d-models/robotic-manipulator-0fd88ae6662745c9a73e28afc9991be4) by Makke (https://sketchfab.com/makke3d) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
