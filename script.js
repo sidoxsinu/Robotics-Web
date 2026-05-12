@@ -68,6 +68,8 @@ console.log('✓ Lighting setup complete');
 // ============================================
 
 let robotArm = null;
+let upperArm = null;
+let upperArmInitialRotX = 0;
 
 const gltfLoader = new GLTFLoader();
 
@@ -76,20 +78,27 @@ gltfLoader.load(
     (gltf) => {
         robotArm = gltf.scene;
         
+        // Find the upper arm joint for hierarchical animation
+        upperArm = robotArm.getObjectByName('Cylinder.014');
+        if (upperArm) {
+            upperArmInitialRotX = upperArm.rotation.z || upperArm.rotation.x; 
+            // Depending on the local axes, it might be X or Z. We'll animate X relative to its initial state.
+        }
+
         // Auto-Scaling & Centering
         const box = new THREE.Box3().setFromObject(robotArm);
         const size = new THREE.Vector3();
         box.getSize(size);
         const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 10 / maxDim; // Dynamic scale to fit 10 units
+        const scale = 12 / maxDim; // Dynamic scale to fit 12 units (increased size)
         robotArm.scale.set(scale, scale, scale);
 
-        // Center the model exactly at (0, -3, 0)
+        // Center the model so its BASE (min Y) is at y=-5, and center X/Z
         box.setFromObject(robotArm); // Recalculate after scaling
         const center = new THREE.Vector3();
         box.getCenter(center);
         robotArm.position.x += (0 - center.x);
-        robotArm.position.y += (-3 - center.y);
+        robotArm.position.y += (-5 - box.min.y); // Align bottom to -5 (moved down)
         robotArm.position.z += (0 - center.z);
         
         // Add to scene
@@ -203,16 +212,24 @@ console.log('✓ Renderer setup complete');
 
 function animate() {
     // Calculate target rotation based on mouse position
-    // Adjusted the direction values so the arm follows the cursor correctly when facing forward
-    // Added Math.PI to targetX to rotate the model 180 degrees to show its front side
-    targetX = (mouseX * 0.001) + Math.PI;  // Convert to radians and flip 180 deg
-    targetY = mouseY * 0.001;
+    targetX = mouseX * 0.001;  // Track horizontally from zero
+    targetY = mouseY * 0.001;  // Track vertically from zero
     
     // Update model rotation with easing (smooth interpolation)
     if (robotArm) {
-        // Easing formula: new_value = current_value + easing_factor * (target - current)
+        // Base yaw rotation (left/right)
         robotArm.rotation.y += 0.05 * (targetX - robotArm.rotation.y);
-        robotArm.rotation.x += 0.05 * (targetY - robotArm.rotation.x);
+        
+        // Arm pitch rotation (up/down) applied to the upper arm joint if available
+        if (upperArm) {
+            // We apply the targetY as an offset to the initial rotation
+            // We use Z axis because GLTF models exported from Blender often have Y-up Z-forward, so Pitch is local Z or X
+            // Assuming X for pitch based on typical Three.js conventions, but we will apply to X.
+            let targetJointRot = upperArmInitialRotX + targetY;
+            upperArm.rotation.x += 0.05 * (targetJointRot - upperArm.rotation.x);
+        } else {
+            robotArm.rotation.x += 0.05 * (targetY - robotArm.rotation.x);
+        }
     }
     
     // Render the scene
