@@ -83,11 +83,17 @@ let part04 = null;
 let part03 = null;
 let upperArm = null;
 
+// Fingers for random twitching
+let fingerParts = [];
+let targetFingerTwitch = 0;
+let currentFingerTwitch = 0;
+
 // Initial rotations to act as rest pose
 let part05RotY = 0;
 let part04RotX = 0;
 let part03RotX = 0;
 let upperArmRotX = 0;
+let upperArmRotY = 0;
 
 const gltfLoader = new GLTFLoader();
 
@@ -126,6 +132,15 @@ gltfLoader.load(
         part03 = robotArm.getObjectByName('part03') || robotArm.getObjectByName('part.03');
         upperArm = robotArm.getObjectByName('arm');
 
+        // Extract the finger groups to apply micro-movements
+        robotArm.traverse((child) => {
+            if (child.name === 'lower.half.of.finger' || 
+                child.name === 'upper.half.of.finger' || 
+                child.name.startsWith('nail.')) {
+                fingerParts.push(child);
+            }
+        });
+
         if (baseJoint && part05 && part04 && part03 && upperArm) {
             // Re-parent to create a kinematic chain: Base -> part05 -> part04 -> part03 -> upperArm
             // Object3D.attach() preserves the world transform while reparenting
@@ -139,6 +154,7 @@ gltfLoader.load(
             part04RotX = part04.rotation.x;
             part03RotX = part03.rotation.x;
             upperArmRotX = upperArm.rotation.x;
+            upperArmRotY = upperArm.rotation.y;
 
             console.log('✓ Kinematic chain successfully established');
         } else {
@@ -310,8 +326,8 @@ function animate() {
         let idealTotalPitch = rawTargetY + 0.3; // Slight forward offset so it looks AT the user
         let wristPitch = idealTotalPitch - shoulderPitch - elbowPitch;
 
-        // Clamp wrist to prevent broken joints
-        wristPitch = THREE.MathUtils.clamp(wristPitch, -1.2, 1.5);
+        // Increased clamp range to make the wrist much more bentable
+        wristPitch = THREE.MathUtils.clamp(wristPitch, -2.5, 2.5);
 
         targetPitch04 = shoulderPitch;
         targetPitch03 = elbowPitch;
@@ -321,6 +337,25 @@ function animate() {
         part04.rotation.x = THREE.MathUtils.lerp(part04.rotation.x, part04RotX + targetPitch04, 0.05); // Shoulder (Medium)
         part03.rotation.x = THREE.MathUtils.lerp(part03.rotation.x, part03RotX + targetPitch03, 0.10); // Elbow (Faster)
         upperArm.rotation.x = THREE.MathUtils.lerp(upperArm.rotation.x, upperArmRotX + targetPitchUpper, 0.25); // Wrist/Fingers (Snappy)
+
+        // Random finger twitching (micro-movements to feel alive)
+        if (Math.random() < 0.03) { // 3% chance every frame to start a new twitch
+            // Target twitch value: 0 is resting, positive value pulls fingers "inside"
+            targetFingerTwitch = Math.random() > 0.5 ? (Math.random() * 0.15) : 0.0; 
+        }
+        
+        // Snappy robotic interpolation for the twitch
+        currentFingerTwitch = THREE.MathUtils.lerp(currentFingerTwitch, targetFingerTwitch, 0.4);
+        
+        // Apply the twitch to the finger parts
+        fingerParts.forEach(part => {
+            // Uniformly scale down slightly to simulate closing inward, avoiding mesh deformation
+            let scale = 1.0 - currentFingerTwitch;
+            part.scale.set(scale, scale, scale);
+        });
+        
+        // Also add a tiny roll to the wrist to make the grip adjustment look mechanical
+        upperArm.rotation.y = THREE.MathUtils.lerp(upperArm.rotation.y, upperArmRotY + (currentFingerTwitch * 0.5), 0.2);
     }
 
     // Render the scene
