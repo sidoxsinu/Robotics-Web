@@ -12,8 +12,10 @@ import { GLTFLoader } from 'https://unpkg.com/three@0.160.0/examples/jsm/loaders
 const canvas = document.querySelector('#webgl');
 const scene = new THREE.Scene();
 
-// Background color (optional, canvas background takes precedence)
-scene.background = new THREE.Color(0x050505);
+// Background color & Fog (Depth perception and contrast)
+const backgroundColor = 0x0a0a0a;
+scene.background = new THREE.Color(backgroundColor);
+scene.fog = new THREE.Fog(backgroundColor, 10, 40);
 
 console.log('✓ Scene created');
 
@@ -43,11 +45,11 @@ console.log('✓ Camera setup complete');
 // ============================================
 
 // Ambient Light (Fill light - uniform illumination)
-const ambientLight = new THREE.AmbientLight(0xffffff, 2.0);
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // Optimized from 2.0
 scene.add(ambientLight);
 
 // Hemisphere Light (Boosts overall lighting, especially from sky/ground)
-const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0);
+const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.8);
 hemisphereLight.position.set(0, 20, 0);
 scene.add(hemisphereLight);
 
@@ -56,8 +58,13 @@ const directionalLight = new THREE.DirectionalLight(0xffffff, 2.0);
 directionalLight.position.set(5, 5, 5);
 scene.add(directionalLight);
 
-// Point Light (Rim light - cool sci-fi accent)
-const pointLight = new THREE.PointLight(0x88ccff, 3.0);
+// Rim Light (Sharp backlighting for visual interest & contrast)
+const rimLight = new THREE.DirectionalLight(0xffffff, 3.0);
+rimLight.position.set(-5, 5, -10); // Positioned behind the model
+scene.add(rimLight);
+
+// Point Light (Cool sci-fi accent)
+const pointLight = new THREE.PointLight(0x88ccff, 1.2); // Optimized from 3.0
 pointLight.position.set(-5, 3, -5);
 scene.add(pointLight);
 
@@ -88,6 +95,29 @@ gltfLoader.load(
     'robotic_manipulator/scene.gltf',  // Model path relative to index.html
     (gltf) => {
         robotArm = gltf.scene;
+
+        // Traverse the model to apply a dark color to all materials
+        robotArm.traverse((child) => {
+            if (child.isMesh && child.material) {
+                const applyDarkMaterial = (mat) => {
+                    // Override color to a sleek dark tone
+                    mat.color.setHex(0x1a1a1a); // Very dark gray
+                    
+                    // Boost metallic/roughness for a premium look
+                    if (mat.isMeshStandardMaterial || mat.isMeshPhysicalMaterial) {
+                        mat.metalness = 0.8;
+                        mat.roughness = 0.3;
+                    }
+                    mat.needsUpdate = true;
+                };
+
+                if (Array.isArray(child.material)) {
+                    child.material.forEach(applyDarkMaterial);
+                } else {
+                    applyDarkMaterial(child.material);
+                }
+            }
+        });
 
         // Find the parts using the exact GLTF node names
         baseJoint = robotArm.getObjectByName('Base');
@@ -275,7 +305,7 @@ function animate() {
         // A rational limit prevents it from bending backwards (broken bone).
         // If bending backwards happened at -1.2, then positive must be the safe inward bend.
         let elbowBend = (1.0 - stretch) * 1.2; // 0.0 (straight) when reaching far, 1.2 (bent) when close
-        let elbowPitch = THREE.MathUtils.clamp(elbowBend, 0.0, 1.5); 
+        let elbowPitch = THREE.MathUtils.clamp(elbowBend, 0.0, 1.5);
 
         // Wrist/Forearm: Angles the claw to always face the cursor playfully
         let wristPitch = THREE.MathUtils.clamp(rawTargetY + (1.0 - stretch) * 0.5, -0.8, 1.0);
