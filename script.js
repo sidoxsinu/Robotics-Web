@@ -220,16 +220,15 @@ function animate() {
         // Base yaw rotation (left/right)
         robotArm.rotation.y += 0.05 * (targetX - robotArm.rotation.y);
         
-        // Arm pitch rotation (up/down) applied to the upper arm joint if available
+        // Arm pitch rotation (up/down) disabled so the model only turns left/right
+        /*
         if (upperArm) {
-            // We apply the targetY as an offset to the initial rotation
-            // We use Z axis because GLTF models exported from Blender often have Y-up Z-forward, so Pitch is local Z or X
-            // Assuming X for pitch based on typical Three.js conventions, but we will apply to X.
             let targetJointRot = upperArmInitialRotX + targetY;
             upperArm.rotation.x += 0.05 * (targetJointRot - upperArm.rotation.x);
         } else {
             robotArm.rotation.x += 0.05 * (targetY - robotArm.rotation.x);
         }
+        */
     }
     
     // Render the scene
@@ -244,33 +243,6 @@ animate();
 
 console.log('✓ Animation loop started');
 
-// ============================================
-// 9. TOGGLE BUTTON INTERACTIVITY
-// ============================================
-
-const toggleContainer = document.querySelector('.toggle-container');
-const toggleLabel = document.querySelector('.toggle-label');
-let isToggleActive = true;  // Default state is ON
-
-if (toggleContainer) {
-    toggleContainer.addEventListener('click', () => {
-        isToggleActive = !isToggleActive;
-        
-        if (isToggleActive) {
-            // ON state
-            toggleContainer.classList.remove('off');
-            toggleLabel.textContent = 'ON';
-            console.log('Toggle: ON');
-        } else {
-            // OFF state
-            toggleContainer.classList.add('off');
-            toggleLabel.textContent = 'OFF';
-            console.log('Toggle: OFF');
-        }
-    });
-    
-    console.log('✓ Toggle button functionality added');
-}
 
 // ============================================
 // 10. DEBUG INFO
