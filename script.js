@@ -80,6 +80,7 @@ let upperArm = null;
 let part05RotY = 0;
 let part04RotX = 0;
 let part03RotX = 0;
+let upperArmRotX = 0;
 
 const gltfLoader = new GLTFLoader();
 
@@ -107,6 +108,7 @@ gltfLoader.load(
             part05RotY = part05.rotation.y;
             part04RotX = part04.rotation.x;
             part03RotX = part03.rotation.x;
+            upperArmRotX = upperArm.rotation.x;
             
             console.log('✓ Kinematic chain successfully established');
         } else {
@@ -242,6 +244,7 @@ console.log('✓ Renderer setup complete');
 let targetYaw = 0;
 let targetPitch04 = 0;
 let targetPitch03 = 0;
+let targetPitchUpper = 0;
 
 function animate() {
     // 1. Calculate raw target angles based on mouse position
@@ -264,13 +267,16 @@ function animate() {
         // We split the pitch between the lower arm (part04) and upper arm (part03)
         let clampedPitch04 = THREE.MathUtils.clamp(rawTargetY, -0.6, 0.6); // Lower arm limits
         let clampedPitch03 = THREE.MathUtils.clamp(rawTargetY * 1.5, -0.8, 0.8); // Upper arm limits
+        let clampedPitchUpper = THREE.MathUtils.clamp(rawTargetY * 2.0, -1.0, 1.0); // Forearm limits
         
         targetPitch04 = clampedPitch04;
         targetPitch03 = clampedPitch03;
+        targetPitchUpper = clampedPitchUpper;
 
         // Smoothly interpolate pitch
         part04.rotation.x = THREE.MathUtils.lerp(part04.rotation.x, part04RotX + targetPitch04, 0.05);
         part03.rotation.x = THREE.MathUtils.lerp(part03.rotation.x, part03RotX + targetPitch03, 0.05);
+        upperArm.rotation.x = THREE.MathUtils.lerp(upperArm.rotation.x, upperArmRotX + targetPitchUpper, 0.05);
     }
     
     // Render the scene
