@@ -102,7 +102,7 @@ gltfLoader.load(
                 const applyDarkMaterial = (mat) => {
                     // Override color to a sleek dark tone
                     mat.color.setHex(0x1a1a1a); // Very dark gray
-                    
+
                     // Boost metallic/roughness for a premium look
                     if (mat.isMeshStandardMaterial || mat.isMeshPhysicalMaterial) {
                         mat.metalness = 0.8;
@@ -297,18 +297,21 @@ function animate() {
 
         // 3. Organic Arm Articulation (Reaching & Grabbing)
 
-        // Shoulder: Controls vertical tracking. Clamped strictly to prevent clipping the floor or falling backward.
-        // ranges roughly from pointing up (-0.4) to leaning forward (0.8)
-        let shoulderPitch = THREE.MathUtils.clamp(rawTargetY, -0.4, 0.8);
+        // Shoulder: Leans toward the cursor but respects physical limits
+        let shoulderPitch = THREE.MathUtils.clamp(rawTargetY, -0.2, 0.8);
 
-        // Elbow: Bends inward when cursor is close, straightens out when cursor is far
-        // A rational limit prevents it from bending backwards (broken bone).
-        // If bending backwards happened at -1.2, then positive must be the safe inward bend.
-        let elbowBend = (1.0 - stretch) * 1.2; // 0.0 (straight) when reaching far, 1.2 (bent) when close
-        let elbowPitch = THREE.MathUtils.clamp(elbowBend, 0.0, 1.5);
+        // Elbow: Bends slightly backward to absorb distance, avoiding the "shrinking" folded look
+        // We limit the backward bend to -0.6 so the arm maintains volume.
+        let elbowBend = -(1.0 - stretch) * 0.6;
+        let elbowPitch = THREE.MathUtils.clamp(elbowBend, -1.0, 0.0);
 
-        // Wrist/Forearm: Angles the claw to always face the cursor playfully
-        let wristPitch = THREE.MathUtils.clamp(rawTargetY + (1.0 - stretch) * 0.5, -0.8, 1.0);
+        // Wrist: The claw points directly at the cursor by compensating for the shoulder and elbow.
+        // The total angle of the arm is targeted towards the mouse.
+        let idealTotalPitch = rawTargetY + 0.3; // Slight forward offset so it looks AT the user
+        let wristPitch = idealTotalPitch - shoulderPitch - elbowPitch;
+
+        // Clamp wrist to prevent broken joints
+        wristPitch = THREE.MathUtils.clamp(wristPitch, -1.2, 1.5);
 
         targetPitch04 = shoulderPitch;
         targetPitch03 = elbowPitch;
