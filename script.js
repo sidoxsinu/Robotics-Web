@@ -248,10 +248,10 @@ let targetPitchUpper = 0;
 
 function animate() {
     // 1. Calculate raw target angles based on mouse position
-    // Base Yaw: Invert X so the arm follows the mouse horizontally
-    let rawTargetX = -(mouseX / windowHalfX) * (Math.PI / 2);
+    // Base Yaw: Arm follows the mouse horizontally
+    let rawTargetX = (mouseX / windowHalfX) * (Math.PI / 2);
 
-    // Arm Pitch (Shoulder): Invert Y so mouse UP pitches the arm UP
+    // Arm Pitch (Shoulder): Invert Y so up/down tracking is flipped
     let rawTargetY = -(mouseY / windowHalfY) * (Math.PI / 4);
 
     // Distance from center determines how much the arm "reaches" (0 = center, 1 = edge)
@@ -261,21 +261,24 @@ function animate() {
 
     if (robotArm && part05 && part04 && part03 && upperArm) {
         // 2. Base Yaw (Left/Right)
+        // local Z is the correct vertical axis for yaw due to the GLTF's -90deg X rotation
         targetYaw = THREE.MathUtils.clamp(rawTargetX, -Math.PI / 2, Math.PI / 2);
         part05.rotation.z = THREE.MathUtils.lerp(part05.rotation.z, part05RotY + targetYaw, 0.05);
 
         // 3. Organic Arm Articulation (Reaching & Grabbing)
 
-        // Shoulder: Controls vertical tracking
-        let shoulderPitch = THREE.MathUtils.clamp(rawTargetY, -0.6, 0.8);
+        // Shoulder: Controls vertical tracking. Clamped strictly to prevent clipping the floor or falling backward.
+        // ranges roughly from pointing up (-0.4) to leaning forward (0.8)
+        let shoulderPitch = THREE.MathUtils.clamp(rawTargetY, -0.4, 0.8);
 
         // Elbow: Bends inward when cursor is close, straightens out when cursor is far
-        // Assuming negative rotation bends the elbow inward
-        let elbowPitch = THREE.MathUtils.lerp(-1.2, 0.2, stretch);
+        // A rational limit prevents it from bending backwards (broken bone).
+        // If bending backwards happened at -1.2, then positive must be the safe inward bend.
+        let elbowBend = (1.0 - stretch) * 1.2; // 0.0 (straight) when reaching far, 1.2 (bent) when close
+        let elbowPitch = THREE.MathUtils.clamp(elbowBend, 0.0, 1.5); 
 
         // Wrist/Forearm: Angles the claw to always face the cursor playfully
-        // When pulling back, the wrist bends forward to look at the screen
-        let wristPitch = THREE.MathUtils.clamp(rawTargetY * 1.5 + (1 - stretch) * 0.8, -1.0, 1.2);
+        let wristPitch = THREE.MathUtils.clamp(rawTargetY + (1.0 - stretch) * 0.5, -0.8, 1.0);
 
         targetPitch04 = shoulderPitch;
         targetPitch03 = elbowPitch;
