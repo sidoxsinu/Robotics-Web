@@ -123,12 +123,12 @@ gltfLoader.load(
         const scale = 12 / maxDim; // Dynamic scale to fit 12 units (increased size)
         robotArm.scale.set(scale, scale, scale);
 
-        // Center the model so its BASE (min Y) is at y=-5, and center X/Z
+        // Center the model so its BASE (min Y) is at y=-8, and center X/Z
         box.setFromObject(robotArm); // Recalculate after scaling
         const center = new THREE.Vector3();
         box.getCenter(center);
         robotArm.position.x += (0 - center.x);
-        robotArm.position.y += (-5 - box.min.y); // Align bottom to -5 (moved down)
+        robotArm.position.y += (-8 - box.min.y); // Align bottom to -8 (moved further down)
         robotArm.position.z += (0 - center.z);
 
         // Add to scene
@@ -263,7 +263,7 @@ function animate() {
         // 2. Base Yaw (Left/Right)
         // local Z is the correct vertical axis for yaw due to the GLTF's -90deg X rotation
         targetYaw = THREE.MathUtils.clamp(rawTargetX, -Math.PI / 2, Math.PI / 2);
-        part05.rotation.z = THREE.MathUtils.lerp(part05.rotation.z, part05RotY + targetYaw, 0.05);
+        part05.rotation.z = THREE.MathUtils.lerp(part05.rotation.z, part05RotY + targetYaw, 0.03); // Heavy Base
 
         // 3. Organic Arm Articulation (Reaching & Grabbing)
 
@@ -284,10 +284,10 @@ function animate() {
         targetPitch03 = elbowPitch;
         targetPitchUpper = wristPitch;
 
-        // Smoothly interpolate all pitch joints
-        part04.rotation.x = THREE.MathUtils.lerp(part04.rotation.x, part04RotX + targetPitch04, 0.05);
-        part03.rotation.x = THREE.MathUtils.lerp(part03.rotation.x, part03RotX + targetPitch03, 0.05);
-        upperArm.rotation.x = THREE.MathUtils.lerp(upperArm.rotation.x, upperArmRotX + targetPitchUpper, 0.05);
+        // Smoothly interpolate all pitch joints with staggered speeds for a "catching" effect
+        part04.rotation.x = THREE.MathUtils.lerp(part04.rotation.x, part04RotX + targetPitch04, 0.05); // Shoulder (Medium)
+        part03.rotation.x = THREE.MathUtils.lerp(part03.rotation.x, part03RotX + targetPitch03, 0.10); // Elbow (Faster)
+        upperArm.rotation.x = THREE.MathUtils.lerp(upperArm.rotation.x, upperArmRotX + targetPitchUpper, 0.25); // Wrist/Fingers (Snappy)
     }
 
     // Render the scene
