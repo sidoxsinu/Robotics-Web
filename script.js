@@ -88,14 +88,14 @@ gltfLoader.load(
     'robotic_manipulator/scene.gltf',  // Model path relative to index.html
     (gltf) => {
         robotArm = gltf.scene;
-        
+
         // Find the parts using the exact GLTF node names
         baseJoint = robotArm.getObjectByName('Base');
         part05 = robotArm.getObjectByName('part05') || robotArm.getObjectByName('part.05');
         part04 = robotArm.getObjectByName('part04') || robotArm.getObjectByName('part.04');
         part03 = robotArm.getObjectByName('part03') || robotArm.getObjectByName('part.03');
         upperArm = robotArm.getObjectByName('arm');
-        
+
         if (baseJoint && part05 && part04 && part03 && upperArm) {
             // Re-parent to create a kinematic chain: Base -> part05 -> part04 -> part03 -> upperArm
             // Object3D.attach() preserves the world transform while reparenting
@@ -103,16 +103,16 @@ gltfLoader.load(
             part05.attach(part04);
             part04.attach(part03);
             part03.attach(upperArm);
-            
+
             // Store initial local rotations for clamping limits relative to the rest pose
             part05RotY = part05.rotation.y;
             part04RotX = part04.rotation.x;
             part03RotX = part03.rotation.x;
             upperArmRotX = upperArm.rotation.x;
-            
+
             console.log('✓ Kinematic chain successfully established');
         } else {
-            console.warn('✗ Could not find all parts for kinematic chain', {baseJoint, part05, part04, part03, upperArm});
+            console.warn('✗ Could not find all parts for kinematic chain', { baseJoint, part05, part04, part03, upperArm });
         }
 
         // Auto-Scaling & Centering
@@ -130,10 +130,10 @@ gltfLoader.load(
         robotArm.position.x += (0 - center.x);
         robotArm.position.y += (-5 - box.min.y); // Align bottom to -5 (moved down)
         robotArm.position.z += (0 - center.z);
-        
+
         // Add to scene
         scene.add(robotArm);
-        
+
         console.log('✓ Model loaded successfully', robotArm);
     },
     // Progress callback (optional)
@@ -144,7 +144,7 @@ gltfLoader.load(
     // Error callback
     (error) => {
         console.error('✗ Model loading failed:', error);
-        
+
         // On-Screen Error UI
         const errorDiv = document.createElement('div');
         errorDiv.style.position = 'absolute';
@@ -201,14 +201,14 @@ window.addEventListener('resize', () => {
     // Update size object
     sizes.width = window.innerWidth;
     sizes.height = window.innerHeight;
-    
+
     // Update camera
     camera.aspect = sizes.width / sizes.height;
     camera.updateProjectionMatrix();
-    
+
     // Update renderer
     renderer.setSize(sizes.width, sizes.height);
-    
+
     console.log(`✓ Resized to ${sizes.width}x${sizes.height}`);
 });
 
@@ -248,40 +248,48 @@ let targetPitchUpper = 0;
 
 function animate() {
     // 1. Calculate raw target angles based on mouse position
-    // Base Yaw: Left/Right up to 90 degrees (Math.PI / 2)
-    let rawTargetX = (mouseX / windowHalfX) * (Math.PI / 2); 
-    // Arm Pitch: Up/Down up to 45 degrees (Math.PI / 4)
-    let rawTargetY = (mouseY / windowHalfY) * (Math.PI / 4);
-    
-    if (robotArm && part05 && part04 && part03) {
+    // Base Yaw: Invert X so the arm follows the mouse horizontally
+    let rawTargetX = -(mouseX / windowHalfX) * (Math.PI / 2);
+
+    // Arm Pitch (Shoulder): Invert Y so mouse UP pitches the arm UP
+    let rawTargetY = -(mouseY / windowHalfY) * (Math.PI / 4);
+
+    // Distance from center determines how much the arm "reaches" (0 = center, 1 = edge)
+    let dist = Math.sqrt(mouseX * mouseX + mouseY * mouseY);
+    let maxDist = Math.sqrt(windowHalfX * windowHalfX + windowHalfY * windowHalfY);
+    let stretch = Math.min(1.0, dist / maxDist);
+
+    if (robotArm && part05 && part04 && part03 && upperArm) {
         // 2. Base Yaw (Left/Right)
-        // Because the GLTF is exported with a -90deg X rotation, the local Z axis points UP (World Y).
-        // Therefore, we rotate around local Z to achieve horizontal yaw.
         targetYaw = THREE.MathUtils.clamp(rawTargetX, -Math.PI / 2, Math.PI / 2);
-        
-        // Smoothly interpolate current rotation to target rotation
         part05.rotation.z = THREE.MathUtils.lerp(part05.rotation.z, part05RotY + targetYaw, 0.05);
 
-        // 3. Arm Pitch (Forward/Backward)
-        // The local X axis remains aligned with the World X axis.
-        // We split the pitch between the lower arm (part04) and upper arm (part03)
-        let clampedPitch04 = THREE.MathUtils.clamp(rawTargetY, -0.6, 0.6); // Lower arm limits
-        let clampedPitch03 = THREE.MathUtils.clamp(rawTargetY * 1.5, -0.8, 0.8); // Upper arm limits
-        let clampedPitchUpper = THREE.MathUtils.clamp(rawTargetY * 2.0, -1.0, 1.0); // Forearm limits
-        
-        targetPitch04 = clampedPitch04;
-        targetPitch03 = clampedPitch03;
-        targetPitchUpper = clampedPitchUpper;
+        // 3. Organic Arm Articulation (Reaching & Grabbing)
 
-        // Smoothly interpolate pitch
+        // Shoulder: Controls vertical tracking
+        let shoulderPitch = THREE.MathUtils.clamp(rawTargetY, -0.6, 0.8);
+
+        // Elbow: Bends inward when cursor is close, straightens out when cursor is far
+        // Assuming negative rotation bends the elbow inward
+        let elbowPitch = THREE.MathUtils.lerp(-1.2, 0.2, stretch);
+
+        // Wrist/Forearm: Angles the claw to always face the cursor playfully
+        // When pulling back, the wrist bends forward to look at the screen
+        let wristPitch = THREE.MathUtils.clamp(rawTargetY * 1.5 + (1 - stretch) * 0.8, -1.0, 1.2);
+
+        targetPitch04 = shoulderPitch;
+        targetPitch03 = elbowPitch;
+        targetPitchUpper = wristPitch;
+
+        // Smoothly interpolate all pitch joints
         part04.rotation.x = THREE.MathUtils.lerp(part04.rotation.x, part04RotX + targetPitch04, 0.05);
         part03.rotation.x = THREE.MathUtils.lerp(part03.rotation.x, part03RotX + targetPitch03, 0.05);
         upperArm.rotation.x = THREE.MathUtils.lerp(upperArm.rotation.x, upperArmRotX + targetPitchUpper, 0.05);
     }
-    
+
     // Render the scene
     renderer.render(scene, camera);
-    
+
     // Request next animation frame (~60 FPS)
     window.requestAnimationFrame(animate);
 }
