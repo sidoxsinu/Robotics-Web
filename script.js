@@ -238,33 +238,39 @@ console.log('✓ Renderer setup complete');
 // 8. ANIMATION LOOP
 // ============================================
 
+// Store target rotations separately for interpolation
+let targetYaw = 0;
+let targetPitch04 = 0;
+let targetPitch03 = 0;
+
 function animate() {
-    // Calculate target rotation based on mouse position
-    // Map window-relative mouseX (-windowHalfX to windowHalfX) to an angle
-    targetX = (mouseX / windowHalfX) * Math.PI; // -180 to +180 degrees
-    targetY = (mouseY / windowHalfY) * (Math.PI / 4); // -45 to +45 degrees
+    // 1. Calculate raw target angles based on mouse position
+    // Base Yaw: Left/Right up to 90 degrees (Math.PI / 2)
+    let rawTargetX = (mouseX / windowHalfX) * (Math.PI / 2); 
+    // Arm Pitch: Up/Down up to 45 degrees (Math.PI / 4)
+    let rawTargetY = (mouseY / windowHalfY) * (Math.PI / 4);
     
-    // Update model rotation with easing (smooth interpolation)
-    if (robotArm) {
-        if (part05 && part04 && part03) {
-            // Realistic Limits (Clamp Angles)
-            // Limit yaw to roughly -150 to +150 degrees to simulate cable limits or physical stops
-            let clampedYaw = Math.max(-2.6, Math.min(2.6, targetX));
-            
-            // Smoothly rotate the base horizontal pivot (Yaw)
-            part05.rotation.y += 0.05 * ((part05RotY - clampedYaw) - part05.rotation.y);
-            
-            // Calculate pitch for the arms
-            // Split the vertical mouse movement into two joints for realistic bending
-            let clampedPitch04 = Math.max(-0.6, Math.min(0.6, targetY)); // Lower arm pitch
-            let clampedPitch03 = Math.max(-0.8, Math.min(0.8, targetY * 1.5)); // Upper arm pitch
-            
-            part04.rotation.x += 0.05 * ((part04RotX - clampedPitch04) - part04.rotation.x);
-            part03.rotation.x += 0.05 * ((part03RotX - clampedPitch03) - part03.rotation.x);
-        } else {
-            // Fallback rotation if kinematic chain is broken
-            robotArm.rotation.y += 0.05 * (targetX * 0.5 - robotArm.rotation.y);
-        }
+    if (robotArm && part05 && part04 && part03) {
+        // 2. Base Yaw (Left/Right)
+        // Because the GLTF is exported with a -90deg X rotation, the local Z axis points UP (World Y).
+        // Therefore, we rotate around local Z to achieve horizontal yaw.
+        targetYaw = THREE.MathUtils.clamp(rawTargetX, -Math.PI / 2, Math.PI / 2);
+        
+        // Smoothly interpolate current rotation to target rotation
+        part05.rotation.z = THREE.MathUtils.lerp(part05.rotation.z, part05RotY + targetYaw, 0.05);
+
+        // 3. Arm Pitch (Forward/Backward)
+        // The local X axis remains aligned with the World X axis.
+        // We split the pitch between the lower arm (part04) and upper arm (part03)
+        let clampedPitch04 = THREE.MathUtils.clamp(rawTargetY, -0.6, 0.6); // Lower arm limits
+        let clampedPitch03 = THREE.MathUtils.clamp(rawTargetY * 1.5, -0.8, 0.8); // Upper arm limits
+        
+        targetPitch04 = clampedPitch04;
+        targetPitch03 = clampedPitch03;
+
+        // Smoothly interpolate pitch
+        part04.rotation.x = THREE.MathUtils.lerp(part04.rotation.x, part04RotX + targetPitch04, 0.05);
+        part03.rotation.x = THREE.MathUtils.lerp(part03.rotation.x, part03RotX + targetPitch03, 0.05);
     }
     
     // Render the scene
