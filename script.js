@@ -134,8 +134,8 @@ gltfLoader.load(
 
         // Extract the finger groups to apply micro-movements
         robotArm.traverse((child) => {
-            if (child.name === 'lower.half.of.finger' || 
-                child.name === 'upper.half.of.finger' || 
+            if (child.name === 'lower.half.of.finger' ||
+                child.name === 'upper.half.of.finger' ||
                 child.name.startsWith('nail.')) {
                 fingerParts.push(child);
             }
@@ -341,19 +341,19 @@ function animate() {
         // Random finger twitching (micro-movements to feel alive)
         if (Math.random() < 0.03) { // 3% chance every frame to start a new twitch
             // Target twitch value: 0 is resting, positive value pulls fingers "inside"
-            targetFingerTwitch = Math.random() > 0.5 ? (Math.random() * 0.15) : 0.0; 
+            targetFingerTwitch = Math.random() > 0.5 ? (Math.random() * 0.15) : 0.0;
         }
-        
+
         // Snappy robotic interpolation for the twitch
         currentFingerTwitch = THREE.MathUtils.lerp(currentFingerTwitch, targetFingerTwitch, 0.4);
-        
+
         // Apply the twitch to the finger parts
         fingerParts.forEach(part => {
             // Uniformly scale down slightly to simulate closing inward, avoiding mesh deformation
             let scale = 1.0 - currentFingerTwitch;
             part.scale.set(scale, scale, scale);
         });
-        
+
         // Also add a tiny roll to the wrist to make the grip adjustment look mechanical
         upperArm.rotation.y = THREE.MathUtils.lerp(upperArm.rotation.y, upperArmRotY + (currentFingerTwitch * 0.5), 0.2);
     }
