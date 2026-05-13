@@ -68,8 +68,18 @@ console.log('✓ Lighting setup complete');
 // ============================================
 
 let robotArm = null;
+
+// References to the kinematic parts
+let baseJoint = null;
+let part05 = null;
+let part04 = null;
+let part03 = null;
 let upperArm = null;
-let upperArmInitialRotX = 0;
+
+// Initial rotations to act as rest pose
+let part05RotY = 0;
+let part04RotX = 0;
+let part03RotX = 0;
 
 const gltfLoader = new GLTFLoader();
 
@@ -78,11 +88,29 @@ gltfLoader.load(
     (gltf) => {
         robotArm = gltf.scene;
         
-        // Find the upper arm joint for hierarchical animation
-        upperArm = robotArm.getObjectByName('Cylinder.014');
-        if (upperArm) {
-            upperArmInitialRotX = upperArm.rotation.z || upperArm.rotation.x; 
-            // Depending on the local axes, it might be X or Z. We'll animate X relative to its initial state.
+        // Find the parts using the exact GLTF node names
+        baseJoint = robotArm.getObjectByName('Base');
+        part05 = robotArm.getObjectByName('part05') || robotArm.getObjectByName('part.05');
+        part04 = robotArm.getObjectByName('part04') || robotArm.getObjectByName('part.04');
+        part03 = robotArm.getObjectByName('part03') || robotArm.getObjectByName('part.03');
+        upperArm = robotArm.getObjectByName('arm');
+        
+        if (baseJoint && part05 && part04 && part03 && upperArm) {
+            // Re-parent to create a kinematic chain: Base -> part05 -> part04 -> part03 -> upperArm
+            // Object3D.attach() preserves the world transform while reparenting
+            baseJoint.attach(part05);
+            part05.attach(part04);
+            part04.attach(part03);
+            part03.attach(upperArm);
+            
+            // Store initial local rotations for clamping limits relative to the rest pose
+            part05RotY = part05.rotation.y;
+            part04RotX = part04.rotation.x;
+            part03RotX = part03.rotation.x;
+            
+            console.log('✓ Kinematic chain successfully established');
+        } else {
+            console.warn('✗ Could not find all parts for kinematic chain', {baseJoint, part05, part04, part03, upperArm});
         }
 
         // Auto-Scaling & Centering
@@ -212,23 +240,31 @@ console.log('✓ Renderer setup complete');
 
 function animate() {
     // Calculate target rotation based on mouse position
-    targetX = mouseX * 0.001;  // Track horizontally from zero
-    targetY = mouseY * 0.001;  // Track vertically from zero
+    // Map window-relative mouseX (-windowHalfX to windowHalfX) to an angle
+    targetX = (mouseX / windowHalfX) * Math.PI; // -180 to +180 degrees
+    targetY = (mouseY / windowHalfY) * (Math.PI / 4); // -45 to +45 degrees
     
     // Update model rotation with easing (smooth interpolation)
     if (robotArm) {
-        // Base yaw rotation (left/right)
-        robotArm.rotation.y += 0.05 * (targetX - robotArm.rotation.y);
-        
-        // Arm pitch rotation (up/down) disabled so the model only turns left/right
-        /*
-        if (upperArm) {
-            let targetJointRot = upperArmInitialRotX + targetY;
-            upperArm.rotation.x += 0.05 * (targetJointRot - upperArm.rotation.x);
+        if (part05 && part04 && part03) {
+            // Realistic Limits (Clamp Angles)
+            // Limit yaw to roughly -150 to +150 degrees to simulate cable limits or physical stops
+            let clampedYaw = Math.max(-2.6, Math.min(2.6, targetX));
+            
+            // Smoothly rotate the base horizontal pivot (Yaw)
+            part05.rotation.y += 0.05 * ((part05RotY - clampedYaw) - part05.rotation.y);
+            
+            // Calculate pitch for the arms
+            // Split the vertical mouse movement into two joints for realistic bending
+            let clampedPitch04 = Math.max(-0.6, Math.min(0.6, targetY)); // Lower arm pitch
+            let clampedPitch03 = Math.max(-0.8, Math.min(0.8, targetY * 1.5)); // Upper arm pitch
+            
+            part04.rotation.x += 0.05 * ((part04RotX - clampedPitch04) - part04.rotation.x);
+            part03.rotation.x += 0.05 * ((part03RotX - clampedPitch03) - part03.rotation.x);
         } else {
-            robotArm.rotation.x += 0.05 * (targetY - robotArm.rotation.x);
+            // Fallback rotation if kinematic chain is broken
+            robotArm.rotation.y += 0.05 * (targetX * 0.5 - robotArm.rotation.y);
         }
-        */
     }
     
     // Render the scene
